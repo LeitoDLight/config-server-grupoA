@@ -16,28 +16,44 @@ Spring Cloud Config Server - Grupo A
 
 ## Orden de arranque
 1. config-server-grupoA (8888)
-2. discovery-server-grupoA (8761)
-3. pedido-service-grupoA (8071)
-4. pago-service-grupoA (8072)
-5. api-gateway-grupoA (8070)
+2. discovery-server-grupo12 (8761)
+3. pedido-service-grupo12 (8071)
+4. pago-service-grupo12 (8072)
+5. api-gateway-grupo12 (8070)
 
 ## Cómo probar
 - http://localhost:8888/pedido-service/dev -> monto-minimo-envio-gratis = 150.00
 - http://localhost:8888/pedido-service/prod -> monto-minimo-envio-gratis = 300.00
 
-## Configuración que usa pedido-service-grupoA
-    spring.application.name=pedido-service-grupoA
+## Configuración que usa pedido-service-grupo12
+    spring.application.name=pedido-service-grupo12
     spring.profiles.active=dev
     spring.config.import=configserver:http://localhost:8888
     spring.cloud.config.name=pedido-service
     management.endpoints.web.exposure.include=refresh,health,info
+    eureka.client.refresh.enable=false
 
-`spring.cloud.config.name=pedido-service` es necesario porque el nombre de la aplicación lleva el sufijo -grupoA, pero los archivos se llaman pedido-service-{perfil}.properties.
+`spring.cloud.config.name=pedido-service` es necesario porque el nombre de la aplicación lleva el sufijo -grupo12, pero los archivos se llaman pedido-service-{perfil}.properties.
 
-## Prueba de recarga en caliente
+`eureka.client.refresh.enable=false` evita que el refresh recree el cliente Eureka; sin esa línea, POST /actuator/refresh responde 500 con Spring Boot 4.1.1 y Spring Cloud 2025.1.3.
+
+## Consumo en pedido-service-grupo12 (2.3)
+- Repositorio: https://github.com/JoseYataco/T2---Desarrollo-de-Aplicaciones-WEB (carpeta pedido-service-grupo12)
+- Dependencias agregadas: spring-cloud-starter-config y spring-boot-starter-actuator.
+- ConfiguracionController: anotado con @RefreshScope, inyecta con @Value las propiedades ecom.* y spring.datasource.url.
+- Endpoint: GET /api/v1/pedidos/configuracion
+
+        {
+          "impuesto-igv": 0.18,
+          "monto-minimo-envio-gratis": 150.00,
+          "mensaje-bienvenida": "Entorno de DESARROLLO - Pedidos Activos Grupo A",
+          "datasource.url": "jdbc:postgresql://localhost:5432/ecommerce_dev_db"
+        }
+
+## Prueba de recarga en caliente (2.4)
 1. GET http://localhost:8070/api/v1/pedidos/configuracion -> 150.00
 2. Editar en GitHub pedido-service-dev.properties a 250.00 (commit)
-3. POST http://localhost:8071/actuator/refresh
+3. POST http://localhost:8071/actuator/refresh -> ["config.client.version","ecom.monto-minimo-envio-gratis"]
 4. GET http://localhost:8070/api/v1/pedidos/configuracion -> 250.00 (sin reiniciar)
 5. Devolver a 150.00
 
